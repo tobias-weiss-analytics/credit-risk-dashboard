@@ -103,10 +103,14 @@ def build_pipeline(config: ModelConfig) -> Pipeline:
     return Pipeline([("preprocessor", preprocessor), ("model", model)])
 
 
+def _cost(fp, fn) -> int:
+    return int(fp * COST_APPROVE_BAD + fn * COST_REJECT_GOOD)
+
+
 def expected_cost(y_true, approve) -> int:
     """Total misclassification cost of approve (1) / reject (0) decisions."""
     tn, fp, fn, tp = confusion_matrix(y_true, approve, labels=[0, 1]).ravel()
-    return int(fp * COST_APPROVE_BAD + fn * COST_REJECT_GOOD)
+    return _cost(fp, fn)
 
 
 def cost_curve(y_true, proba_good, thresholds=None) -> pd.DataFrame:
@@ -125,10 +129,11 @@ def decision_metrics(y_true, proba_good, threshold: float) -> dict:
     approve = (np.asarray(proba_good) >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, approve, labels=[0, 1]).ravel()
     n = tn + fp + fn + tp
+    cost = _cost(fp, fn)
     return {
         "tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp),
-        "cost": int(fp * COST_APPROVE_BAD + fn * COST_REJECT_GOOD),
-        "cost_per_application": (fp * COST_APPROVE_BAD + fn * COST_REJECT_GOOD) / n,
+        "cost": cost,
+        "cost_per_application": cost / n,
         "accuracy": (tp + tn) / n,
         "approval_rate": (tp + fp) / n,
         "bad_rate_among_approved": fp / (tp + fp) if tp + fp else float("nan"),

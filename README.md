@@ -1,6 +1,6 @@
 # Credit Risk Analytics Dashboard
 
-[![CI](https://github.com/<your-username>/credit-risk-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/<your-username>/credit-risk-dashboard/actions/workflows/ci.yml)
+[![CI](https://github.com/tobias-weiss-analytics/credit-risk-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/tobias-weiss-analytics/credit-risk-dashboard/actions/workflows/ci.yml)
 
 Explainable, cost-sensitive credit scoring for the **UCI Statlog (German Credit Data)** dataset, built as an interactive **Streamlit** dashboard for loan officers and risk managers.
 
@@ -58,7 +58,7 @@ Evaluated with nested, stratified 5-fold cross-validation, repeated 3 times (see
 Requires Python 3.11 or newer.
 
 ```bash
-git clone https://github.com/<your-username>/credit-risk-dashboard.git
+git clone https://github.com/tobias-weiss-analytics/credit-risk-dashboard.git
 cd credit-risk-dashboard
 
 python -m venv .venv
@@ -77,7 +77,7 @@ Development:
 pip install -r requirements-dev.txt
 pytest                             # data, model, monotonicity and app smoke tests
 ruff check .
-python scripts/evaluate_model.py   # regenerates reports/model_comparison.md (~1 min)
+python -m scripts.evaluate_model   # regenerates reports/model_comparison.md (~1 min)
 ```
 
 ## Repository structure

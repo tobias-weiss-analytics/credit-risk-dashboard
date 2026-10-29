@@ -42,13 +42,36 @@ class Segmentation:
         return self.kmeans.predict(self.scaler.transform(encode_for_clustering(X, self.features)))
 
 
-def describe_clusters(centroids_z: np.ndarray, features: list[str]) -> dict[int, str]:
-    """Name each cluster after its two most distinctive features (centroid z-scores)."""
-    names = {}
-    for i, centre in enumerate(centroids_z):
-        top = np.argsort(-np.abs(centre))[:2]
-        parts = [f"{'High' if centre[j] > 0 else 'Low'} {features[j].replace('_', ' ').lower()}" for j in top]
-        names[i] = " · ".join(parts)
+def _level(z: float) -> str:
+    for bound, label in [(-1.0, "Very low"), (-0.25, "Low"), (0.25, "Average"), (1.0, "High")]:
+        if z <= bound:
+            return label
+    return "Very high"
+
+
+def _centroid_label(feature: str, value: float) -> str:
+    """Centroid in original units; for ordinal features the nearest category."""
+    if feature in ORDINAL_FEATURES:
+        order, _ = ORDINAL_FEATURES[feature]
+        return f"≈ {order[int(np.clip(round(value), 0, len(order) - 1))]}"
+    return f"Ø {value:,.0f}" if abs(value) >= 10 else f"Ø {value:.1f}"
+
+
+def describe_clusters(centroids_z: np.ndarray, centroids: np.ndarray, features: list[str]) -> dict[int, str]:
+    """Name each cluster after its two most distinctive features (centroid z-scores).
+
+    Clusters that would share a name (e.g. with a single feature and a large k) get
+    the centroid of their most distinctive feature in original units appended.
+    """
+    tops = [np.argsort(-np.abs(centre))[:2] for centre in centroids_z]
+    names = {
+        i: " · ".join(f"{_level(centroids_z[i][j])} {features[j].replace('_', ' ').lower()}" for j in top)
+        for i, top in enumerate(tops)
+    }
+    counts = pd.Series(names).value_counts()
+    for i, top in enumerate(tops):
+        if counts[names[i]] > 1:
+            names[i] = f"{names[i]} ({_centroid_label(features[top[0]], centroids[i][top[0]])})"
     # Guarantee unique names.
     seen: dict[str, int] = {}
     for i, n in names.items():
@@ -69,5 +92,6 @@ def segment(X: pd.DataFrame, features: list[str], k: int, random_state: int = 42
         coords = PCA(n_components=2, random_state=random_state).fit_transform(z)
     else:
         coords = np.column_stack([z[:, 0], np.zeros(len(z))])
+    centres = kmeans.cluster_centers_
     return Segmentation(features, scaler, kmeans, kmeans.labels_, coords,
-                        describe_clusters(kmeans.cluster_centers_, features))
+                        describe_clusters(centres, scaler.inverse_transform(centres), features))

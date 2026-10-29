@@ -41,6 +41,9 @@ st.set_page_config(page_title="Credit Risk Analytics", page_icon="🏦", layout=
 
 COLORS = {"Approve": "#2e9e5b", "Reject": "#d64541", "Good": "#2e9e5b", "Bad": "#d64541", "New": "#7f8c8d"}
 SEGMENT_FEATURES = NUMERIC_FEATURES + list(ORDINAL_FEATURES)
+# Cached resources are shared by all sessions; bound them so retraining with
+# many configurations does not grow memory without limit.
+MAX_CACHED = 5
 
 
 # --------------------------------------------------------------------------- #
@@ -51,26 +54,26 @@ def get_data() -> tuple[pd.DataFrame, pd.Series]:
     return load_german_credit()
 
 
-@st.cache_resource(show_spinner="Training model ...")
+@st.cache_resource(show_spinner="Training model ...", max_entries=MAX_CACHED)
 def get_model(config: ModelConfig):
     X, y = get_data()
     return train(X, y, config)
 
 
-@st.cache_resource(show_spinner="Preparing explanations ...")
+@st.cache_resource(show_spinner="Preparing explanations ...", max_entries=MAX_CACHED)
 def get_explainer(config: ModelConfig):
     X, _ = get_data()
     return make_explainer(get_model(config), X)
 
 
-@st.cache_resource(show_spinner="Computing SHAP values ...")
+@st.cache_resource(show_spinner="Computing SHAP values ...", max_entries=MAX_CACHED)
 def get_global_shap(config: ModelConfig):
     X, _ = get_data()
     sample = X.sample(300, random_state=42)
     return explain(get_model(config), get_explainer(config), sample, readable=False)
 
 
-@st.cache_resource
+@st.cache_resource(max_entries=MAX_CACHED)
 def get_segmentation(features: tuple[str, ...], k: int):
     X, _ = get_data()
     return segment(X, list(features), k)
